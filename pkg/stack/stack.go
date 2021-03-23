@@ -65,6 +65,7 @@ type SipStack struct {
 	invitesLock           *sync.RWMutex
 	authenticator         *ServerAuthManager
 	log                   log.Logger
+	Rport                 bool
 }
 
 // NewSipStack creates new instance of SipStack.
@@ -342,6 +343,9 @@ func (s *SipStack) prepareRequest(req sip.Request) sip.Request {
 		}
 		if !viaHop.Params.Has("branch") {
 			viaHop.Params.Add("branch", sip.String{Str: sip.GenerateBranch()})
+		}
+		if s.Rport {
+			viaHop.Params.Add("rport", sip.String{Str: ""})
 		}
 	} else {
 		viaHop = &sip.ViaHop{
