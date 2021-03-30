@@ -16,7 +16,6 @@ import (
 	"github.com/ghettovoice/gosip/log"
 	"github.com/ghettovoice/gosip/sip"
 	"github.com/ghettovoice/gosip/sip/parser"
-	"github.com/ghettovoice/gosip/transport"
 )
 
 var (
@@ -45,7 +44,10 @@ func createUdp() *rtp.RtpUDPStream {
 func main() {
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, syscall.SIGTERM, syscall.SIGINT)
-	stack := stack.NewSipStack(&stack.SipStackConfig{Extensions: []string{"replaces", "outbound"}, Dns: "8.8.8.8"}, logger)
+	stack := stack.NewSipStack(&stack.SipStackConfig{
+		UserAgent:  "Go Sip Client/example-client",
+		Extensions: []string{"replaces", "outbound"},
+		Dns:        "8.8.8.8"}, logger)
 
 	listen := "0.0.0.0:5080"
 	logger.Infof("Listen => %s", listen)
@@ -58,15 +60,12 @@ func main() {
 		logger.Panic(err)
 	}
 
-	tlsOptions := &transport.TLSConfig{Cert: "certs/cert.pem", Key: "certs/key.pem"}
-
-	if err := stack.ListenTLS("wss", "0.0.0.0:5091", tlsOptions); err != nil {
+	if err := stack.ListenTLS("wss", "0.0.0.0:5091", nil); err != nil {
 		logger.Panic(err)
 	}
 
 	ua := ua.NewUserAgent(&ua.UserAgentConfig{
-		UserAgent: "Go Sip Client/1.0.0",
-		SipStack:  stack,
+		SipStack: stack,
 	}, logger)
 
 	ua.InviteStateHandler = func(sess *session.Session, req *sip.Request, resp *sip.Response, state session.Status) {
@@ -97,7 +96,7 @@ func main() {
 		logger.Error(err)
 	}
 
-	profile := account.NewProfile(uri.Clone(), "goSIP",
+	profile := account.NewProfile(uri.Clone(), "goSIP/example-client",
 		&account.AuthInfo{
 			AuthUser: "100",
 			Password: "100",
@@ -107,7 +106,7 @@ func main() {
 		stack,
 	)
 
-	recipient, err := parser.ParseSipUri("sip:127.0.0.1:5081;transport=wss")
+	recipient, err := parser.ParseSipUri("sip:100@127.0.0.1:5081;transport=wss")
 	if err != nil {
 		logger.Error(err)
 	}
@@ -121,6 +120,11 @@ func main() {
 
 	called, err2 := parser.ParseUri("sip:400@127.0.0.1")
 	if err2 != nil {
+		logger.Error(err)
+	}
+
+	recipient, err = parser.ParseSipUri("sip:400@127.0.0.1:5081;transport=wss")
+	if err != nil {
 		logger.Error(err)
 	}
 
